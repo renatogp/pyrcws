@@ -106,7 +106,7 @@ class PaymentAttempt(object):
         assert self._authorized, u'get_authorized(...) must be called before capture(...)'    
         
         ret = self.client.service.ConfirmTxn(self.data, self.numsqn, self.numcv,
-            self.numautor, self.installments, self.transacao, self.total, self.affiliation_id,
+            self.numautor, self.installments, self.transaction, self.total, self.affiliation_id,
             '', self.order_id, self.order_id, numdoc2, numdoc3, numdoc4, pax1, 
             pax2, pax3, pax4)
         
