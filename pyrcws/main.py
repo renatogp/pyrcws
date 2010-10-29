@@ -117,7 +117,7 @@ class PaymentAttempt(object):
     def get_receipt_html(self):
         values = {
             'DATA': self.data,
-            'TRANSACAO': self.transacao,
+            'TRANSACAO': self.transaction,
             'NUMAUTOR': self.numautor,
             'NUMCV': self.numcv
         }
