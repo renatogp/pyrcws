@@ -2,6 +2,7 @@
 import urllib
 import urllib2
 from suds.client import Client
+from util import moneyfmt
 
 SOAP_URL = 'https://ecommerce.redecard.com.br/pos_virtual/wskomerci/cap.asmx?wsdl'
 RECEIPT_URL = 'https://ecommerce.redecard.com.br/pos_virtual/cupom.asp'
@@ -59,7 +60,9 @@ class PaymentAttempt(object):
         
         self.affiliation_id = affiliation_id
         self.transaction = transaction
-        self.total = '%s' % round(float(total), 2)
+        self.total = moneyfmt(total)
+        print self.total
+
         self.installments = installments
         self.order_id = order_id
         self.card_number = card_number
@@ -67,6 +70,7 @@ class PaymentAttempt(object):
         self.exp_month = exp_month
         self.exp_year = exp_year
         self.card_holders_name = card_holders_name
+        
 
         self.client = self._get_connection()
         self._authorized = False
