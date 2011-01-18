@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 
-def moneyfmt(value, places=2, curr='', sep=',', dp='.',
+def moneyfmt(value, places=2, curr='', sep='', dp='.',
              pos='', neg='-', trailneg=''):
     """Convert Decimal to a money formatted string.
 
