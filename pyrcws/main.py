@@ -1,12 +1,29 @@
 # coding: utf-8
+import logging
 import urllib
 import urllib2
+from suds import WebFault
 from suds.client import Client
 from util import moneyfmt
 
 
-SOAP_URL = 'https://ecommerce.redecard.com.br/pos_virtual/wskomerci/cap.asmx?wsdl'
-SOAP_URL_TEST = 'https://ecommerce.redecard.com.br/pos_virtual/wskomerci/cap_teste.asmx?wsdl'
+# logging.basicConfig(level=logging.INFO)
+# logging.getLogger('suds.client').setLevel(logging.DEBUG)
+# logging.getLogger('suds.transport').setLevel(logging.DEBUG)
+# logging.getLogger('suds.xsd.schema').setLevel(logging.DEBUG)
+# logging.getLogger('suds.wsdl').setLevel(logging.DEBUG)
+
+
+# URLS config
+# service
+SERVICE_URL = 'https://ecommerce.redecard.com.br/pos_virtual/wskomerci'  # remove trailing slash
+# sandbox false
+SOAP_URL = '%s/cap.asmx' % SERVICE_URL
+WSDL_SOAP_URL = '%s?wsdl' % SOAP_URL
+# sandbox true
+SOAP_URL_TEST = '%s/cap_teste.asmx' % SERVICE_URL
+WSDL_SOAP_URL_TEST = '%s?wsdl' % SOAP_URL_TEST
+# return
 RECEIPT_URL = 'https://ecommerce.redecard.com.br/pos_virtual/cupom.asp'
 
 
@@ -42,13 +59,13 @@ class PaymentAttempt(object):
     '''
 
     def __init__(self, affiliation_id, total, installments, order_id, card_number, cvc2,
-                exp_month, exp_year, card_holders_name, transaction=None, debug=False):
+            exp_month, exp_year, card_holders_name, transaction=None, debug=False):
 
         assert installments in range(1, 13), u'installments must be a integer between 1 and 12'
 
         assert (installments == 1 and (transaction == 'cash' or transaction is None)) \
-                    or installments > 1 and transaction <> 'cash', \
-                    u'if installments = 1 then transaction must be None or "cash"'
+            or installments > 1 and transaction != 'cash', \
+            u'if installments = 1 then transaction must be None or "cash"'
 
         if installments == 1:
             transaction = 'cash'
@@ -74,33 +91,65 @@ class PaymentAttempt(object):
         self.exp_year = exp_year
         self.card_holders_name = card_holders_name
 
-        self.client = self._get_connection()
+        self.client = self._get_connection(debug)
         self._authorized = False
 
         self.debug = debug
 
-    def _get_connection(self):
-        if self.debug:
-            return Client(SOAP_URL_TEST)
-        return Client(SOAP_URL)
+    def _get_connection(self, debug=False):
+        if debug:
+            return Client(WSDL_SOAP_URL_TEST, location=SOAP_URL_TEST, cache=None)
+        return Client(WSDL_SOAP_URL, location=SOAP_URL, cache=None)
 
     def _get_total(self):
-        # As transacoes de teste devem ser feitas ate o valor de R$ 0.01
+        # sandbox transactions must be total = 0.01
         if self.debug:
             return '0.01'
         return self.total
 
-    def get_authorized(self, pax1=None, pax2=None, pax3=None, pax4=None,
-                numdoc1=None, numdoc2=None, numdoc3=None, numdoc4=None, iata=None, conftxn='N',
-                concentrador=None, entrada=None, distribuidor=None, taxaembarque=None):
+    def get_authorized(self, pax1='', pax2='', pax3='', pax4='',
+            numdoc1='', numdoc2='', numdoc3='', numdoc4='', iata='', conftxn='N',
+            concentrador='', entrada='', distribuidor='', taxaembarque='', adddata=''):
 
-        args = (self._get_total, self.transaction, self.installments, self.affiliation_id, self.order_id,
+        args = (self._get_total(), self.transaction, self.installments, self.affiliation_id, self.order_id,
                 self.card_number, self.cvc2, self.exp_month, self.exp_year, self.card_holders_name,
                 iata, distribuidor, concentrador, taxaembarque, entrada, numdoc1, numdoc2,
-                numdoc3, numdoc4, pax1, pax2, pax3, pax4, conftxn)
+                numdoc3, numdoc4, pax1, pax2, pax3, pax4, conftxn, adddata)
 
         if self.debug:
-            ret = self.client.service.GetAuthorizedTst(*args)
+            try:
+                ret = self.client.service.GetAuthorizedTst(*args)
+                """
+                GetAuthorizedTst(
+                    xs:string Total,
+                    xs:string Transacao,
+                    xs:string Parcelas,
+                    xs:string Filiacao,
+                    xs:string NumPedido,
+                    xs:string Nrcartao,
+                    xs:string CVC2,
+                    xs:string Mes,
+                    xs:string Ano,
+                    xs:string Portador,
+                    xs:string IATA,
+                    xs:string Distribuidor,
+                    xs:string Concentrador,
+                    xs:string TaxaEmbarque,
+                    xs:string Entrada,
+                    xs:string Pax1,
+                    xs:string Pax2,
+                    xs:string Pax3,
+                    xs:string Pax4,
+                    xs:string Numdoc1,
+                    xs:string Numdoc2,
+                    xs:string Numdoc3,
+                    xs:string Numdoc4,
+                    xs:string ConfTxn,
+                    xs:string AddData,
+                )
+                """
+            except WebFault, e:
+                raise GetAuthorizedException(0, 'Webfault. %s' % e)
         else:
             ret = self.client.service.GetAuthorized(*args)
 
@@ -120,17 +169,43 @@ class PaymentAttempt(object):
         return True
 
     def capture(self, pax1=None, pax2=None, pax3=None, pax4=None,
-                numdoc2=None, numdoc3=None, numdoc4=None):
+                numdoc2=None, numdoc3=None, numdoc4=None, adddata=None):
 
         assert self._authorized, u'get_authorized(...) must be called before capture(...)'
 
         args = (self.data, self.numsqn, self.numcv,
-                self.numautor, self.installments, self.transaction, self._get_total, self.affiliation_id,
+                self.numautor, self.installments, self.transaction, self._get_total(), self.affiliation_id,
                 '', self.order_id, self.order_id, numdoc2, numdoc3, numdoc4, pax1,
-                pax2, pax3, pax4)
+                pax2, pax3, pax4, adddata)
 
         if self.debug:
-            ret = self.client.service.ConfirmTxnTst(*args)
+            try:
+                ret = self.client.service.ConfirmTxnTst(*args)
+                """
+                ConfirmTxnTst(
+                    xs:string Data,
+                    xs:string NumSqn,
+                    xs:string NumCV,
+                    xs:string NumAutor,
+                    xs:string Parcelas,
+                    xs:string TransOrig,
+                    xs:string Total,
+                    xs:string Filiacao,
+                    xs:string Distribuidor,
+                    xs:string NumPedido,
+                    xs:string Pax1,
+                    xs:string Pax2,
+                    xs:string Pax3,
+                    xs:string Pax4,
+                    xs:string Numdoc1,
+                    xs:string Numdoc2,
+                    xs:string Numdoc3,
+                    xs:string Numdoc4,
+                    xs:string AddData,
+                )
+                """
+            except WebFault, e:
+                raise GetAuthorizedException(0, 'Webfault. %s' % e)
         else:
             ret = self.client.service.ConfirmTxn(*args)
 
