@@ -81,7 +81,6 @@ class PaymentAttempt(object):
         self.affiliation_id = affiliation_id
         self.transaction = transaction
         self.total = moneyfmt(total)
-        # print self.total
 
         self.installments = installments
         self.order_id = order_id
@@ -119,35 +118,6 @@ class PaymentAttempt(object):
         if self.debug:
             try:
                 ret = self.client.service.GetAuthorizedTst(*args)
-                """
-                GetAuthorizedTst(
-                    xs:string Total,
-                    xs:string Transacao,
-                    xs:string Parcelas,
-                    xs:string Filiacao,
-                    xs:string NumPedido,
-                    xs:string Nrcartao,
-                    xs:string CVC2,
-                    xs:string Mes,
-                    xs:string Ano,
-                    xs:string Portador,
-                    xs:string IATA,
-                    xs:string Distribuidor,
-                    xs:string Concentrador,
-                    xs:string TaxaEmbarque,
-                    xs:string Entrada,
-                    xs:string Pax1,
-                    xs:string Pax2,
-                    xs:string Pax3,
-                    xs:string Pax4,
-                    xs:string Numdoc1,
-                    xs:string Numdoc2,
-                    xs:string Numdoc3,
-                    xs:string Numdoc4,
-                    xs:string ConfTxn,
-                    xs:string AddData,
-                )
-                """
             except WebFault, e:
                 raise GetAuthorizedException(0, 'Webfault. %s' % e)
         else:
@@ -181,29 +151,6 @@ class PaymentAttempt(object):
         if self.debug:
             try:
                 ret = self.client.service.ConfirmTxnTst(*args)
-                """
-                ConfirmTxnTst(
-                    xs:string Data,
-                    xs:string NumSqn,
-                    xs:string NumCV,
-                    xs:string NumAutor,
-                    xs:string Parcelas,
-                    xs:string TransOrig,
-                    xs:string Total,
-                    xs:string Filiacao,
-                    xs:string Distribuidor,
-                    xs:string NumPedido,
-                    xs:string Pax1,
-                    xs:string Pax2,
-                    xs:string Pax3,
-                    xs:string Pax4,
-                    xs:string Numdoc1,
-                    xs:string Numdoc2,
-                    xs:string Numdoc3,
-                    xs:string Numdoc4,
-                    xs:string AddData,
-                )
-                """
             except WebFault, e:
                 raise GetAuthorizedException(0, 'Webfault. %s' % e)
         else:
