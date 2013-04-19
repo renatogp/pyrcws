@@ -49,3 +49,4 @@ def moneyfmt(value, places=2, curr='', sep='', dp='.',
     build(curr)
     build(neg if sign else pos)
     return ''.join(reversed(result))
+
